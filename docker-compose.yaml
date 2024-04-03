@@ -1,0 +1,21 @@
+version: '3'
+
+services:
+  base:
+    build: ./container-base
+    tty: true
+    volumes:
+      - .:/root
+
+  gpu:
+    build: ./container-base
+    tty: true
+    volumes:
+      - .:/root
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

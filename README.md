@@ -11,6 +11,13 @@ $ pip install -e .
 
 Edit `./cooker/.config`
 
+
+## Usage
+
+```sh
+$ python3 app.py 
+```
+
 ## Test
 
 ```sh

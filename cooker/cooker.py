@@ -22,7 +22,7 @@ class CodeCooker:
             ai_type (str): 使用するAIのタイプ。
         """
         self._max_retry_count = 3
-        # self.initialize_prompt(ai_type)
+        self._retry_count = 0
 
         self._config = configparser.ConfigParser()
         self._config.read(config_path)
@@ -62,14 +62,7 @@ class CodeCooker:
 
         return response
 
-    def code_cook(self, user_prompt):
-        """
-        与えられたプロンプトに基づいてコードを生成し、実行します。
-
-        Args:
-            user_prompt (str): ユーザープロンプト。
-        """
-
+    def input_prompt(self, user_prompt):
         if self._ai_type == "ANTHROPIC":
             messages = [
                 {"role": "user", "content": user_prompt},
@@ -77,8 +70,13 @@ class CodeCooker:
 
         self._prompt_w_history.extend(messages)
 
-        retry_count = 0
-        while retry_count < self._max_retry_count:
+    def code_cook(self):
+        """
+        与えられたプロンプトに基づいてコードを生成し、実行します。
+        """
+        output_stream = ""
+
+        if self._retry_count < self._max_retry_count:
             try:
                 if self._ai_type == "ANTHROPIC":
                     response = self._chat_claude(
@@ -87,23 +85,21 @@ class CodeCooker:
 
             except Exception as e:
                 print(e)
-                time.sleep(3)
-                continue
 
             if self._ai_type == "ANTHROPIC":
                 assistant_response = response.content[0].text
 
             print("APIからの応答:", assistant_response)
 
-            python = ""
+            python_code = ""
             if "```python" in assistant_response and "```" in assistant_response:
-                python = assistant_response.split("```python")[1].split("```")[0]
+                python_code = assistant_response.split("```python")[1].split("```")[0]
 
             try:
                 stream = io.StringIO()
 
                 with redirect_stdout(stream):
-                    exec(python)
+                    exec(python_code)
 
                 output_stream = stream.getvalue()
 
@@ -114,22 +110,22 @@ class CodeCooker:
                     "role": "assistant",
                     "content": str(assistant_response) + 'result:' + output_stream
                 })
-                break
+                print("コードの実行が完了しました。")
+                self._retry_count = 0
             except Exception as e:
                 print(f"エラーが発生しました: {e}")
                 self._prompt_w_history.append({
                     "role": "assistant",
                     "content": str(assistant_response)
                 })
-                retry_count += 1
-                if retry_count < self._max_retry_count:
+                self._retry_count += 1
+                if self._retry_count < self._max_retry_count:
                     self._prompt_w_history.append({
                         "role": "user",
                         "content": f"エラーが発生しました。エラーメッセージ: {e}\nコードを修正して再度実行してください。"
                     })
-
-        if retry_count < self._max_retry_count:
-            print("コードの実行が完了しました。")
         else:
             print("コードの修正に失敗しました。再実行回数が上限に達しました。")
+            self._retry_count = 0
 
+        return assistant_response+python_code+output_stream

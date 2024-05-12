@@ -1,6 +1,8 @@
 import configparser
 import os
 import io
+import re
+import shutil
 import matplotlib.pyplot as plt
 import japanize_matplotlib
 from contextlib import redirect_stdout
@@ -23,15 +25,30 @@ class CodeCooker:
         """
         self._max_retry_count = 3
         self._retry_count = 0
+        self._image_directory_name = 'images'
 
         self._config = configparser.ConfigParser()
         self._config.read(config_path)
         self._anthropic_api_key = self._config.get('claude_api_key', 'key')
         self.set_ai_type(ai_type)
         self.initialize_prompt()
+        os.makedirs(self._image_directory_name, exist_ok=True)
 
     def initialize_prompt(self):
         self._prompt_w_history = []
+
+    def initialize_images(self):
+        shutil.rmtree(self._image_directory_name, ignore_errors=True)
+        os.makedirs(self._image_directory_name)
+
+    def get_image_files(self):
+        image_extensions = ['.jpg', '.jpeg', '.png', '.gif']
+        image_files = []
+        for filename in os.listdir(self._image_directory_name):
+            if os.path.isfile(os.path.join(self._image_directory_name, filename)) and os.path.splitext(filename)[1].lower() in image_extensions:
+                image_files.append(os.path.join(self._image_directory_name, filename))
+
+        return image_files
 
     def set_ai_type(self, ai_type):
         self._ai_type = ai_type
@@ -74,9 +91,10 @@ class CodeCooker:
         """
         与えられたプロンプトに基づいてコードを生成し、実行します。
         """
+        self._retry_count = 0
         output_stream = ""
 
-        if self._retry_count < self._max_retry_count:
+        while self._retry_count < self._max_retry_count:
             try:
                 if self._ai_type == "ANTHROPIC":
                     response = self._chat_claude(
@@ -111,7 +129,11 @@ class CodeCooker:
                     "content": str(assistant_response) + 'result:' + output_stream
                 })
                 print("コードの実行が完了しました。")
-                self._retry_count = 0
+                if "```python" in assistant_response and "```" in assistant_response:
+                    assistant_response = re.sub(r"\`\`\`python.*?\`\`\`", "", assistant_response, flags=re.DOTALL)
+
+                return assistant_response, python_code, output_stream
+
             except Exception as e:
                 print(f"エラーが発生しました: {e}")
                 self._prompt_w_history.append({
@@ -124,8 +146,11 @@ class CodeCooker:
                         "role": "user",
                         "content": f"エラーが発生しました。エラーメッセージ: {e}\nコードを修正して再度実行してください。"
                     })
-        else:
-            print("コードの修正に失敗しました。再実行回数が上限に達しました。")
-            self._retry_count = 0
 
-        return assistant_response+python_code+output_stream
+        print("コードの修正に失敗しました。再実行回数が上限に達しました。")
+        self._retry_count = 0
+
+        if "```python" in assistant_response and "```" in assistant_response:
+            assistant_response = re.sub(r"\`\`\`python.*?\`\`\`", "", assistant_response, flags=re.DOTALL)
+
+        return assistant_response, python_code, output_stream

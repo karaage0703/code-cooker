@@ -15,7 +15,7 @@ Edit `./cooker/.config`
 ## Usage
 
 ```sh
-$ python3 app.py 
+$ python3 app.py
 ```
 
 ## Test

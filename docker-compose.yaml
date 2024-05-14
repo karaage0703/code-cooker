@@ -3,6 +3,9 @@ version: '3'
 services:
   base:
     build: ./container-base
+    container_name: code-cooker-base
+    ports:
+      - 7860:7860
     tty: true
     volumes:
       - .:/root

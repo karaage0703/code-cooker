@@ -139,7 +139,6 @@ class CodeCooker:
                         self._prompt_w_history
                     )
 
-
             except Exception as e:
                 print(e)
 
@@ -148,6 +147,9 @@ class CodeCooker:
 
             if self._ai_type == "OPENAI":
                 assistant_response = response.choices[0].message.content
+
+            print("Response:")
+            print(assistant_response)
 
             python_code = ""
             if "```python" in assistant_response and "```" in assistant_response:
@@ -188,6 +190,7 @@ class CodeCooker:
                     })
 
         print("コードの修正に失敗しました。再実行回数が上限に達しました。")
+        output_stream = "コードの修正に失敗しました。再実行回数が上限に達しました。"
         self._retry_count = 0
 
         if "```python" in assistant_response and "```" in assistant_response:

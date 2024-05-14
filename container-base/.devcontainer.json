@@ -12,7 +12,16 @@
 				"ms-python.python",
 				"ms-toolsai.jupyter",
 				"ms-toolsai.vscode-jupyter-powertoys"
-			]
+				"njpwerner.autodocstring",
+				"ms-python.flake8",
+				"oderwat.indent-rainbow",
+				"shardulm94.trailing-spaces"
+			],
+			"settings": {
+				"flake8.args": [
+					"--max-complexity=10",
+					"--max-line-length=127"
+				]
 		}
 	}
 

@@ -37,4 +37,4 @@ iface = gr.Interface(
     description="面倒なことはLLMにやらせよう"
 )
 
-iface.launch()
+iface.launch(server_name="0.0.0.0")

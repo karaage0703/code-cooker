@@ -5,7 +5,6 @@ Simple data analysis software like Advanced Data Analysis(Code Interpreter).
 
 ```sh
 $ cd && git clone https://github.com/karaage0703/code-cooker
-$ pip install -e .
 ```
 
 Edit `./cooker/.config` and input api key which you use.

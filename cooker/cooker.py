@@ -3,11 +3,15 @@ import os
 import io
 import re
 import shutil
+import time
+from contextlib import redirect_stdout
+
 import matplotlib.pyplot as plt
 import japanize_matplotlib
-from contextlib import redirect_stdout
+
 import anthropic
-import time
+from openai import OpenAI
+
 from .system_prompt import system_prompt
 
 
@@ -29,13 +33,18 @@ class CodeCooker:
 
         self._config = configparser.ConfigParser()
         self._config.read(config_path)
-        self._anthropic_api_key = self._config.get('claude_api_key', 'key')
         self.set_ai_type(ai_type)
         self.initialize_prompt()
         os.makedirs(self._image_directory_name, exist_ok=True)
 
     def initialize_prompt(self):
         self._prompt_w_history = []
+
+        if self._ai_type == "OPENAI":
+            messages = [
+                {"role": "system", "content": system_prompt},
+            ]
+            self._prompt_w_history.extend(messages)
 
     def initialize_images(self):
         shutil.rmtree(self._image_directory_name, ignore_errors=True)
@@ -54,20 +63,27 @@ class CodeCooker:
         self._ai_type = ai_type
 
         if self._ai_type == "ANTHROPIC":
+            self._anthropic_api_key = self._config.get('claude_api_key', 'key')
             self._client_anthropic = anthropic.Anthropic(
                 api_key=self._anthropic_api_key
             )
 
+        if self._ai_type == "OPENAI":
+            self._openai_api_key = self._config.get('openai_api_key', 'key')
+            self._client_openai = OpenAI(
+                api_key=self._openai_api_key
+            )
+
     def _chat_claude(self, prompt_w_history):
         """
-        Anthropic APIを使用してClaude AIとチャットを行います。
+        Anthropic APIを使用してAIとチャットを行います。
 
         Args:
             prompt_w_history (list): チャット履歴を含むプロンプト。
             system_prompt (str): システムプロンプト。
 
         Returns:
-            response: Anthropic APIからの応答。
+            response: APIからの応答。
         """
         print("I am Claude")
         response = self._client_anthropic.messages.create(
@@ -79,11 +95,29 @@ class CodeCooker:
 
         return response
 
+    def _chat_openai(self, prompt_w_history):
+        """
+        OpenAI APIを使用してAIとチャットを行います。
+
+        Args:
+            prompt_w_history (list): チャット履歴を含むプロンプト。
+            system_prompt (str): システムプロンプト。
+
+        Returns:
+            response: APIからの応答。
+        """
+        print("I am GPT")
+        response = self._client_openai.chat.completions.create(
+            model="gpt-4o",
+            messages=prompt_w_history,
+        )
+
+        return response
+
     def input_prompt(self, user_prompt):
-        if self._ai_type == "ANTHROPIC":
-            messages = [
-                {"role": "user", "content": user_prompt},
-            ]
+        messages = [
+            {"role": "user", "content": user_prompt},
+        ]
 
         self._prompt_w_history.extend(messages)
 
@@ -100,6 +134,11 @@ class CodeCooker:
                     response = self._chat_claude(
                         self._prompt_w_history
                     )
+                if self._ai_type == "OPENAI":
+                    response = self._chat_openai(
+                        self._prompt_w_history
+                    )
+
 
             except Exception as e:
                 print(e)
@@ -107,7 +146,8 @@ class CodeCooker:
             if self._ai_type == "ANTHROPIC":
                 assistant_response = response.content[0].text
 
-            print("APIからの応答:", assistant_response)
+            if self._ai_type == "OPENAI":
+                assistant_response = response.choices[0].message.content
 
             python_code = ""
             if "```python" in assistant_response and "```" in assistant_response:

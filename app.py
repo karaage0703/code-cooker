@@ -6,11 +6,10 @@ from cooker.cooker import CodeCooker
 cooker = CodeCooker(ai_type="ANTHROPIC", config_path="./cooker/.config")
 
 
-# def respond(ai_type, operation, prompt):
-def respond(operation, prompt):
-    print(operation)
+def respond(ai_type, operation, prompt):
+    cooker.set_ai_type(ai_type)
+
     if operation == "new":
-        print("unko")
         cooker.initialize_images()
         cooker.initialize_prompt()
 
@@ -24,7 +23,7 @@ def respond(operation, prompt):
 iface = gr.Interface(
     fn=respond,
     inputs=[
-        # gr.Dropdown(choices=['CLAUDE_3_OPUS', 'GPT4'], label="AIタイプを選択"),
+        gr.Dropdown(choices=['ANTHROPIC', 'OPENAI'], label="AIタイプを選択"),
         gr.Radio(["new", "continue"]),
         gr.Textbox(lines=2, placeholder="ここにプロンプトを入力してください", label="プロンプト")
     ],
@@ -32,7 +31,7 @@ iface = gr.Interface(
         gr.Textbox(lines=1, placeholder="ここに応答が表示されます", label="応答"),
         gr.Textbox(lines=1, placeholder="ここに実行するコードが表示されます", label="コード"),
         gr.Textbox(lines=1, placeholder="ここにコードの実行結果が表示されます", label="結果"),
-        gr.Gallery(label="画像ギャラリー")
+        gr.Gallery(label="画像")
     ],
     title="Code Cooker",
     description="面倒なことはLLMにやらせよう"

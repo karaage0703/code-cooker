@@ -40,7 +40,7 @@ class CodeCooker:
     def initialize_prompt(self):
         self._prompt_w_history = []
 
-        if self._ai_type == "OPENAI":
+        if self._ai_type == "GPT-4" or self._ai_type == "GPT-4O":
             messages = [
                 {"role": "system", "content": system_prompt},
             ]
@@ -62,21 +62,21 @@ class CodeCooker:
     def set_ai_type(self, ai_type):
         self._ai_type = ai_type
 
-        if self._ai_type == "ANTHROPIC":
+        if self._ai_type == "CLAUDE-3-OPUS":
             self._anthropic_api_key = self._config.get('claude_api_key', 'key')
             self._client_anthropic = anthropic.Anthropic(
                 api_key=self._anthropic_api_key
             )
 
-        if self._ai_type == "OPENAI":
+        if self._ai_type == "GPT-4" or self._ai_type == 'GPT-4O':
             self._openai_api_key = self._config.get('openai_api_key', 'key')
             self._client_openai = OpenAI(
                 api_key=self._openai_api_key
             )
 
-    def _chat_claude(self, prompt_w_history):
+    def _chat(self, prompt_w_history):
         """
-        Anthropic APIを使用してAIとチャットを行います。
+        APIを使用してAIとチャットを行います。
 
         Args:
             prompt_w_history (list): チャット履歴を含むプロンプト。
@@ -85,34 +85,38 @@ class CodeCooker:
         Returns:
             response: APIからの応答。
         """
-        print("I am Claude")
-        response = self._client_anthropic.messages.create(
-            max_tokens=2048,
-            messages=prompt_w_history,
-            model="claude-3-opus-20240229",
-            system=system_prompt
-        )
 
-        return response
+        if self._ai_type == "CLAUDE-3-OPUS":
+            print("I am Claude 3 Opus")
+            response = self._client_anthropic.messages.create(
+                max_tokens=2048,
+                messages=prompt_w_history,
+                model="claude-3-opus-20240229",
+                system=system_prompt
+            )
 
-    def _chat_openai(self, prompt_w_history):
-        """
-        OpenAI APIを使用してAIとチャットを行います。
+            assistant_response = response.content[0].text
 
-        Args:
-            prompt_w_history (list): チャット履歴を含むプロンプト。
-            system_prompt (str): システムプロンプト。
+        if self._ai_type == "GPT-4":
+            print("I am GPT")
+            response = self._client_openai.chat.completions.create(
+                model="gpt-4",
+                messages=prompt_w_history,
+            )
 
-        Returns:
-            response: APIからの応答。
-        """
-        print("I am GPT")
-        response = self._client_openai.chat.completions.create(
-            model="gpt-4o",
-            messages=prompt_w_history,
-        )
+            assistant_response = response.choices[0].message.content
 
-        return response
+        if self._ai_type == "GPT-4O":
+            print("I am GPT")
+            response = self._client_openai.chat.completions.create(
+                model="gpt-4o",
+                messages=prompt_w_history,
+            )
+
+            assistant_response = response.choices[0].message.content
+
+        return assistant_response
+
 
     def input_prompt(self, user_prompt):
         messages = [
@@ -127,26 +131,14 @@ class CodeCooker:
         """
         self._retry_count = 0
         output_stream = ""
+        assistant_response = ""
 
         while self._retry_count < self._max_retry_count:
             try:
-                if self._ai_type == "ANTHROPIC":
-                    response = self._chat_claude(
-                        self._prompt_w_history
-                    )
-                if self._ai_type == "OPENAI":
-                    response = self._chat_openai(
-                        self._prompt_w_history
-                    )
+                assistant_response = self._chat(self._prompt_w_history)
 
             except Exception as e:
                 print(e)
-
-            if self._ai_type == "ANTHROPIC":
-                assistant_response = response.content[0].text
-
-            if self._ai_type == "OPENAI":
-                assistant_response = response.choices[0].message.content
 
             print("Response:")
             print(assistant_response)

@@ -3,7 +3,7 @@ import os
 
 from cooker.cooker import CodeCooker
 
-cooker = CodeCooker(ai_type="ANTHROPIC", config_path="./cooker/.config")
+cooker = CodeCooker(ai_type="CLAUDE-3-OPUS", config_path="./cooker/.config")
 
 
 def respond(ai_type, operation, prompt):
@@ -23,7 +23,7 @@ def respond(ai_type, operation, prompt):
 iface = gr.Interface(
     fn=respond,
     inputs=[
-        gr.Dropdown(choices=['ANTHROPIC', 'OPENAI'], label="AIタイプを選択"),
+        gr.Dropdown(choices=['CLAUDE-3-OPUS', 'GPT-4', 'GPT-4O', 'GEMINI-1.5-PRO', 'GEMINI-1.5-FLASH'], label="AIタイプを選択"),
         gr.Radio(["new", "continue"]),
         gr.Textbox(lines=2, placeholder="ここにプロンプトを入力してください", label="プロンプト")
     ],

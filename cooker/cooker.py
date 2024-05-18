@@ -11,6 +11,7 @@ import japanize_matplotlib
 
 import anthropic
 from openai import OpenAI
+import google.generativeai as genai
 
 from .system_prompt import system_prompt
 
@@ -74,6 +75,22 @@ class CodeCooker:
                 api_key=self._openai_api_key
             )
 
+        if self._ai_type == "GEMINI-1.5-PRO":
+            self._gemini_api_key = self._config.get('gemini_api_key', 'key')
+            genai.configure(
+                api_key=self._gemini_api_key
+            )
+            self._client_google = genai.GenerativeModel(
+                'gemini-1.5-pro-latest', system_instruction=[system_prompt])
+
+        if self._ai_type == 'GEMINI-1.5-FLASH':
+            self._gemini_api_key = self._config.get('gemini_api_key', 'key')
+            genai.configure(
+                api_key=self._gemini_api_key
+            )
+            self._client_google = genai.GenerativeModel(
+                'gemini-1.5-flash-latest', system_instruction=[system_prompt])
+
     def _chat(self, prompt_w_history):
         """
         APIを使用してAIとチャットを行います。
@@ -98,7 +115,7 @@ class CodeCooker:
             assistant_response = response.content[0].text
 
         if self._ai_type == "GPT-4":
-            print("I am GPT")
+            print("I am GPT-4")
             response = self._client_openai.chat.completions.create(
                 model="gpt-4",
                 messages=prompt_w_history,
@@ -107,7 +124,7 @@ class CodeCooker:
             assistant_response = response.choices[0].message.content
 
         if self._ai_type == "GPT-4O":
-            print("I am GPT")
+            print("I am GPT-4o")
             response = self._client_openai.chat.completions.create(
                 model="gpt-4o",
                 messages=prompt_w_history,
@@ -115,13 +132,25 @@ class CodeCooker:
 
             assistant_response = response.choices[0].message.content
 
+        if self._ai_type == "GEMINI-1.5-PRO" or self._ai_type == "GEMINI-1.5-FLASH":
+            print("I am Gemini-1.5-Pro")
+            response = self._client_google.generate_content(
+                prompt_w_history
+            )
+
+            assistant_response = response.text
+
         return assistant_response
 
-
     def input_prompt(self, user_prompt):
-        messages = [
-            {"role": "user", "content": user_prompt},
-        ]
+        if self._ai_type == "GEMINI-1.5-PRO" or self._ai_type == "GEMINI-1.5-FLASH":
+            messages = [
+                {"role": "user", "parts": [user_prompt] },
+            ]
+        else:
+            messages = [
+                {"role": "user", "content": user_prompt},
+            ]
 
         self._prompt_w_history.extend(messages)
 
@@ -158,10 +187,16 @@ class CodeCooker:
                 print("Result:")
                 print(output_stream)
 
-                self._prompt_w_history.append({
-                    "role": "assistant",
-                    "content": str(assistant_response) + 'result:' + output_stream
-                })
+                if self._ai_type == "GEMINI-1.5-PRO" or self._ai_type == "GEMINI-1.5-FLASH":
+                    self._prompt_w_history.append({
+                        "role": "model",
+                        "parts": [str(assistant_response) + 'result:' + output_stream]
+                    })
+                else:
+                    self._prompt_w_history.append({
+                        "role": "assistant",
+                        "content": str(assistant_response) + 'result:' + output_stream
+                    })
                 print("コードの実行が完了しました。")
                 if "```python" in assistant_response and "```" in assistant_response:
                     assistant_response = re.sub(r"\`\`\`python.*?\`\`\`", "", assistant_response, flags=re.DOTALL)
@@ -170,16 +205,28 @@ class CodeCooker:
 
             except Exception as e:
                 print(f"エラーが発生しました: {e}")
-                self._prompt_w_history.append({
-                    "role": "assistant",
-                    "content": str(assistant_response)
-                })
+                if self._ai_type == "GEMINI-1.5-PRO" or self._ai_type == "GEMINI-1.5-FLASH":
+                    self._prompt_w_history.append({
+                        "role": "model",
+                        "parts": [str(assistant_response)]
+                    })
+                else:
+                    self._prompt_w_history.append({
+                        "role": "assistant",
+                        "content": str(assistant_response)
+                    })
                 self._retry_count += 1
                 if self._retry_count < self._max_retry_count:
-                    self._prompt_w_history.append({
-                        "role": "user",
-                        "content": f"エラーが発生しました。エラーメッセージ: {e}\nコードを修正して再度実行してください。"
-                    })
+                    if self._ai_type == "GEMINI-1.5-PRO" or self._ai_type == "GEMINI-1.5-FLASH":
+                        self._prompt_w_history.append({
+                            "role": "user",
+                            "parts": [f"エラーが発生しました。エラーメッセージ: {e}\nコードを修正して再度実行してください。"]
+                        })
+                    else:
+                        self._prompt_w_history.append({
+                            "role": "user",
+                            "content": f"エラーが発生しました。エラーメッセージ: {e}\nコードを修正して再度実行してください。"
+                        })
 
         print("コードの修正に失敗しました。再実行回数が上限に達しました。")
         output_stream = "コードの修正に失敗しました。再実行回数が上限に達しました。"

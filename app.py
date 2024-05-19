@@ -3,10 +3,11 @@ import os
 
 from cooker.cooker import CodeCooker
 
-cooker = CodeCooker(ai_type="CLAUDE-3-OPUS", config_path="./cooker/.config")
+cooker = CodeCooker(ai_type="GPT-4o", config_path="./cooker/.config")
 
 ai_type_choices = ['Claude 3 Opus', 'GPT-4', 'GPT-4o', 'Gemini 1.5 Pro', 'Gemini 1.5 Flash']
 systemp_prompt_choices = ['Empty', 'Data Analysis']
+
 
 def respond(ai_type, system_prompt, operation, prompt):
     cooker.set_ai_type(ai_type)

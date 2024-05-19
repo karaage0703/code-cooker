@@ -1,32 +1,24 @@
 from cooker import CodeCooker
 
-cooker = CodeCooker(ai_type="ANTHROPIC", config_path="./cooker/.config")
-cooker.input_prompt("Kaggleのtaitanicの分析をしてください")
+cooker = CodeCooker(ai_type="", config_path="./cooker/.config")
 
-response, python_code, output_stream = cooker.code_cook()
+ai_type_choices = ['Claude 3 Opus', 'GPT-4', 'GPT-4o', 'Gemini 1.5 Pro', 'Gemini 1.5 Flash']
 
-print("response-------------")
-print(response)
+for i in ai_type_choices:
+    print("start-------------")
+    print("AI Type:" + i)
 
-print("python_code-------------")
-print(python_code)
+    cooker.set_ai_type(ai_type=i)
+    cooker.operation(operation="new")
+    cooker.input_prompt("Kaggleのtaitanicの分析をしてください")
+    response, python_code, output_stream = cooker.code_cook()
 
-print("output_stream-------------")
-print(output_stream)
+    print("AI Type:" + i)
+    print("response-------------")
+    print(response)
 
-cooker.set_ai_type(ai_type="OPENAI")
+    print("python_code-------------")
+    print(python_code)
 
-cooker.initialize_images()
-cooker.initialize_prompt()
-cooker.input_prompt("Kaggleのtaitanicの分析をしてください")
-
-response, python_code, output_stream = cooker.code_cook()
-
-print("response-------------")
-print(response)
-
-print("python_code-------------")
-print(python_code)
-
-print("output_stream-------------")
-print(output_stream)
+    print("output_stream-------------")
+    print(output_stream)

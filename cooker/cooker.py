@@ -11,8 +11,10 @@ import japanize_matplotlib
 
 import anthropic
 from openai import OpenAI
+import google.generativeai as genai
 
-from .system_prompt import system_prompt
+from .system_prompt import empty_prompt
+from .system_prompt import data_analysis_prompt
 
 
 class CodeCooker:
@@ -30,23 +32,32 @@ class CodeCooker:
         self._max_retry_count = 3
         self._retry_count = 0
         self._image_directory_name = 'images'
+        self._system_prompt = empty_prompt
+        self._ai_type = ai_type
+        self._previous_ai_type = ai_type
 
         self._config = configparser.ConfigParser()
         self._config.read(config_path)
         self.set_ai_type(ai_type)
-        self.initialize_prompt()
+        self._initialize_images()
+        self._initialize_prompt()
         os.makedirs(self._image_directory_name, exist_ok=True)
 
-    def initialize_prompt(self):
+    def operation(self, operation):
+        if operation == "new" or self._previous_ai_type != self._ai_type:
+            self._initialize_images()
+            self._initialize_prompt()
+
+    def _initialize_prompt(self):
         self._prompt_w_history = []
 
-        if self._ai_type == "OPENAI":
+        if self._ai_type == "GPT-4" or self._ai_type == "GPT-4o":
             messages = [
-                {"role": "system", "content": system_prompt},
+                {"role": "system", "content": self._system_prompt},
             ]
             self._prompt_w_history.extend(messages)
 
-    def initialize_images(self):
+    def _initialize_images(self):
         shutil.rmtree(self._image_directory_name, ignore_errors=True)
         os.makedirs(self._image_directory_name)
 
@@ -60,23 +71,47 @@ class CodeCooker:
         return image_files
 
     def set_ai_type(self, ai_type):
+        self._previous_ai_type = self._ai_type
         self._ai_type = ai_type
 
-        if self._ai_type == "ANTHROPIC":
+        if self._ai_type == "Claude 3 Opus":
             self._anthropic_api_key = self._config.get('claude_api_key', 'key')
             self._client_anthropic = anthropic.Anthropic(
                 api_key=self._anthropic_api_key
             )
 
-        if self._ai_type == "OPENAI":
+        if self._ai_type == "GPT-4" or self._ai_type == 'GPT-4o':
             self._openai_api_key = self._config.get('openai_api_key', 'key')
             self._client_openai = OpenAI(
                 api_key=self._openai_api_key
             )
 
-    def _chat_claude(self, prompt_w_history):
+        if self._ai_type == "Gemini 1.5 Pro":
+            self._gemini_api_key = self._config.get('gemini_api_key', 'key')
+            genai.configure(
+                api_key=self._gemini_api_key
+            )
+            self._client_google = genai.GenerativeModel(
+                'gemini-1.5-pro-latest', system_instruction=[self._system_prompt])
+
+        if self._ai_type == 'Gemini 1.5 Flash':
+            self._gemini_api_key = self._config.get('gemini_api_key', 'key')
+            genai.configure(
+                api_key=self._gemini_api_key
+            )
+            self._client_google = genai.GenerativeModel(
+                'gemini-1.5-flash-latest', system_instruction=[self._system_prompt])
+
+    def set_system_prompt(self, system_prompt):
+        if system_prompt == "Empty":
+            self._system_prompt = empty_prompt
+
+        if system_prompt == "Data Analysis":
+            self._system_prompt = data_analysis_prompt
+
+    def _chat(self, prompt_w_history):
         """
-        Anthropic APIを使用してAIとチャットを行います。
+        APIを使用してAIとチャットを行います。
 
         Args:
             prompt_w_history (list): チャット履歴を含むプロンプト。
@@ -85,41 +120,84 @@ class CodeCooker:
         Returns:
             response: APIからの応答。
         """
-        print("I am Claude")
-        response = self._client_anthropic.messages.create(
-            max_tokens=2048,
-            messages=prompt_w_history,
-            model="claude-3-opus-20240229",
-            system=system_prompt
-        )
 
-        return response
+        if self._ai_type == "Claude 3 Opus":
+            print("I am Claude 3 Opus")
+            response = self._client_anthropic.messages.create(
+                max_tokens=2048,
+                messages=prompt_w_history,
+                model="claude-3-opus-20240229",
+                system=self._system_prompt
+            )
+            assistant_response = response.content[0].text
 
-    def _chat_openai(self, prompt_w_history):
-        """
-        OpenAI APIを使用してAIとチャットを行います。
+        if self._ai_type == "GPT-4":
+            print("I am GPT-4")
+            response = self._client_openai.chat.completions.create(
+                model="gpt-4",
+                messages=prompt_w_history,
+            )
+            assistant_response = response.choices[0].message.content
 
-        Args:
-            prompt_w_history (list): チャット履歴を含むプロンプト。
-            system_prompt (str): システムプロンプト。
+        if self._ai_type == "GPT-4o":
+            print("I am GPT-4o")
+            response = self._client_openai.chat.completions.create(
+                model="gpt-4o",
+                messages=prompt_w_history,
+            )
+            assistant_response = response.choices[0].message.content
 
-        Returns:
-            response: APIからの応答。
-        """
-        print("I am GPT")
-        response = self._client_openai.chat.completions.create(
-            model="gpt-4o",
-            messages=prompt_w_history,
-        )
+        if self._ai_type == "Gemini 1.5 Pro":
+            print("I am Gemini 1.5 Pro")
+            response = self._client_google.generate_content(
+                prompt_w_history
+            )
+            assistant_response = response.text
 
-        return response
+        if self._ai_type == "Gemini 1.5 Flash":
+            print("I am Gemini 1.5 Flash")
+            response = self._client_google.generate_content(
+                prompt_w_history
+            )
+            assistant_response = response.text
+
+        return assistant_response
 
     def input_prompt(self, user_prompt):
-        messages = [
-            {"role": "user", "content": user_prompt},
-        ]
+        if self._ai_type == "Gemini 1.5 Pro" or self._ai_type == "Gemini 1.5 Flash":
+            messages = [
+                {"role": "user", "parts": [user_prompt] },
+            ]
+        else:
+            messages = [
+                {"role": "user", "content": user_prompt},
+            ]
 
         self._prompt_w_history.extend(messages)
+
+    def _handle_error(self, assistant_response, error):
+        if self._ai_type == "Gemini 1.5 Pro" or self._ai_type == "Gemini 1.5 Flash":
+            self._prompt_w_history.append({
+                "role": "model",
+                "parts": [str(assistant_response)]
+            })
+        else:
+            self._prompt_w_history.append({
+                "role": "assistant",
+                "content": str(assistant_response)
+            })
+        self._retry_count += 1
+        if self._retry_count < self._max_retry_count:
+            if self._ai_type == "Gemini 1.5 Pro" or self._ai_type == "Gemini 1.5 Flash":
+                self._prompt_w_history.append({
+                    "role": "user",
+                    "parts": [f"エラーが発生しました。エラーメッセージ: {error}\nコードを修正して再度実行してください。"]
+                })
+            else:
+                self._prompt_w_history.append({
+                    "role": "user",
+                    "content": f"エラーが発生しました。エラーメッセージ: {error}\nコードを修正して再度実行してください。"
+                })
 
     def code_cook(self):
         """
@@ -127,26 +205,14 @@ class CodeCooker:
         """
         self._retry_count = 0
         output_stream = ""
+        assistant_response = ""
 
         while self._retry_count < self._max_retry_count:
             try:
-                if self._ai_type == "ANTHROPIC":
-                    response = self._chat_claude(
-                        self._prompt_w_history
-                    )
-                if self._ai_type == "OPENAI":
-                    response = self._chat_openai(
-                        self._prompt_w_history
-                    )
+                assistant_response = self._chat(self._prompt_w_history)
 
             except Exception as e:
                 print(e)
-
-            if self._ai_type == "ANTHROPIC":
-                assistant_response = response.content[0].text
-
-            if self._ai_type == "OPENAI":
-                assistant_response = response.choices[0].message.content
 
             print("Response:")
             print(assistant_response)
@@ -166,28 +232,25 @@ class CodeCooker:
                 print("Result:")
                 print(output_stream)
 
-                self._prompt_w_history.append({
-                    "role": "assistant",
-                    "content": str(assistant_response) + 'result:' + output_stream
-                })
+                if self._ai_type == "Gemini 1.5 Pro" or self._ai_type == "Gemini 1.5 Flash":
+                    self._prompt_w_history.append({
+                        "role": "model",
+                        "parts": [str(assistant_response) + 'result:' + output_stream]
+                    })
+                else:
+                    self._prompt_w_history.append({
+                        "role": "assistant",
+                        "content": str(assistant_response) + 'result:' + output_stream
+                    })
                 print("コードの実行が完了しました。")
                 if "```python" in assistant_response and "```" in assistant_response:
                     assistant_response = re.sub(r"\`\`\`python.*?\`\`\`", "", assistant_response, flags=re.DOTALL)
 
                 return assistant_response, python_code, output_stream
 
-            except Exception as e:
-                print(f"エラーが発生しました: {e}")
-                self._prompt_w_history.append({
-                    "role": "assistant",
-                    "content": str(assistant_response)
-                })
-                self._retry_count += 1
-                if self._retry_count < self._max_retry_count:
-                    self._prompt_w_history.append({
-                        "role": "user",
-                        "content": f"エラーが発生しました。エラーメッセージ: {e}\nコードを修正して再度実行してください。"
-                    })
+            except Exception as error:
+                print(f"エラーが発生しました: {error}")
+                self._handle_error(assistant_response, error)
 
         print("コードの修正に失敗しました。再実行回数が上限に達しました。")
         output_stream = "コードの修正に失敗しました。再実行回数が上限に達しました。"

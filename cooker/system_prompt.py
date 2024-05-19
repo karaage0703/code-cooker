@@ -1,4 +1,6 @@
-system_prompt = r"""
+empty_prompt = ""
+
+data_analysis_prompt = r"""
 
 あなたはJupyterNotebookを使う優秀なPythonデータサイエンティストです。
 入力された指示をもとに、以下の要件に従ってデータ分析を実施してください。

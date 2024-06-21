@@ -74,7 +74,7 @@ class CodeCooker:
         self._previous_ai_type = self._ai_type
         self._ai_type = ai_type
 
-        if self._ai_type == "Claude 3 Opus":
+        if self._ai_type == "Claude 3.5 Sonnet":
             self._anthropic_api_key = self._config.get('claude_api_key', 'key')
             self._client_anthropic = anthropic.Anthropic(
                 api_key=self._anthropic_api_key
@@ -121,12 +121,12 @@ class CodeCooker:
             response: APIからの応答。
         """
 
-        if self._ai_type == "Claude 3 Opus":
-            print("I am Claude 3 Opus")
+        if self._ai_type == "Claude 3.5 Sonnet":
+            print("I am Claude 3.5 Sonnet")
             response = self._client_anthropic.messages.create(
                 max_tokens=2048,
                 messages=prompt_w_history,
-                model="claude-3-opus-20240229",
+                model="claude-3-5-sonnet-20240620",
                 system=self._system_prompt
             )
             assistant_response = response.content[0].text

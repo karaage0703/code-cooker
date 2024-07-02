@@ -6,7 +6,7 @@ from cooker.cooker import CodeCooker
 cooker = CodeCooker(ai_type="GPT-4o", config_path="./cooker/.config")
 
 ai_type_choices = ['Claude 3.5 Sonnet', 'GPT-4', 'GPT-4o', 'Gemini 1.5 Pro', 'Gemini 1.5 Flash']
-systemp_prompt_choices = ['Empty', 'Data Analysis']
+systemp_prompt_choices = ['Empty', 'Data Analysis', 'Web App Creator']
 
 
 def respond(ai_type, system_prompt, operation, prompt):
@@ -14,10 +14,15 @@ def respond(ai_type, system_prompt, operation, prompt):
     cooker.set_system_prompt(system_prompt)
     cooker.operation(operation)
     cooker.input_prompt(prompt)
-    response, python_code, output_stream = cooker.code_cook()
+    print(prompt)
+    if system_prompt == "Empty" or system_prompt == "Data Analysis":
+        response, code, output_stream = cooker.code_cook()
+
+    if system_prompt == "Web App Creator":
+        response, code, output_stream = cooker.web_app_cook()
 
     image_files = cooker.get_image_files()
-    return response, python_code, output_stream, image_files
+    return response, code, output_stream, image_files
 
 
 iface = gr.Interface(

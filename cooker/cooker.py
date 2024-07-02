@@ -15,6 +15,7 @@ import google.generativeai as genai
 
 from .system_prompt import empty_prompt
 from .system_prompt import data_analysis_prompt
+from .system_prompt import web_app_creator_prompt
 
 
 class CodeCooker:
@@ -108,6 +109,9 @@ class CodeCooker:
 
         if system_prompt == "Data Analysis":
             self._system_prompt = data_analysis_prompt
+
+        if system_prompt == "Web App Creator":
+            self._system_prompt = web_app_creator_prompt
 
     def _chat(self, prompt_w_history):
         """
@@ -260,3 +264,32 @@ class CodeCooker:
             assistant_response = re.sub(r"\`\`\`python.*?\`\`\`", "", assistant_response, flags=re.DOTALL)
 
         return assistant_response, python_code, output_stream
+
+    def web_app_cook(self):
+        """
+        与えられたプロンプトに基づいてウェブアプリを生成します。
+        """
+        assistant_response = ""
+        output_stream = ""
+
+        try:
+            assistant_response = self._chat(self._prompt_w_history)
+
+        except Exception as e:
+            output_stream = e
+
+        print("Response:")
+        print(assistant_response)
+
+        html_code = ""
+        if "```html" in assistant_response and "```" in assistant_response:
+            try:
+                html_code = assistant_response.split("```html")[1].split("```")[0]
+
+            except Exception as e:
+                output_stream = e
+
+        with open("index.html", "w") as file:
+            file.write(html_code)
+
+        return assistant_response, html_code, output_stream

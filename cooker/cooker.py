@@ -170,7 +170,7 @@ class CodeCooker:
     def input_prompt(self, user_prompt):
         if self._ai_type == "Gemini 1.5 Pro" or self._ai_type == "Gemini 1.5 Flash":
             messages = [
-                {"role": "user", "parts": [user_prompt] },
+                {"role": "user", "parts": [user_prompt]},
             ]
         else:
             messages = [
@@ -229,7 +229,7 @@ class CodeCooker:
                 stream = io.StringIO()
 
                 with redirect_stdout(stream):
-                    exec(python_code)
+                    exec(python_code, globals())
 
                 output_stream = stream.getvalue()
 
@@ -291,5 +291,16 @@ class CodeCooker:
 
         with open("index.html", "w") as file:
             file.write(html_code)
+
+        if self._ai_type == "Gemini 1.5 Pro" or self._ai_type == "Gemini 1.5 Flash":
+            self._prompt_w_history.append({
+                "role": "model",
+                "parts": [str(assistant_response)]
+            })
+        else:
+            self._prompt_w_history.append({
+                "role": "assistant",
+                "content": str(assistant_response)
+            })
 
         return assistant_response, html_code, output_stream

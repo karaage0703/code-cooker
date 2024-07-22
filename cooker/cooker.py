@@ -52,7 +52,7 @@ class CodeCooker:
     def _initialize_prompt(self):
         self._prompt_w_history = []
 
-        if self._ai_type == "GPT-4" or self._ai_type == "GPT-4o":
+        if self._ai_type == "GPT-4" or self._ai_type == "GPT-4o" or self._ai_type == "GPR-4o mini":
             messages = [
                 {"role": "system", "content": self._system_prompt},
             ]
@@ -81,7 +81,7 @@ class CodeCooker:
                 api_key=self._anthropic_api_key
             )
 
-        if self._ai_type == "GPT-4" or self._ai_type == 'GPT-4o':
+        if self._ai_type == "GPT-4" or self._ai_type == 'GPT-4o' or self._ai_type == "GPT-4o mini":
             self._openai_api_key = self._config.get('openai_api_key', 'key')
             self._client_openai = OpenAI(
                 api_key=self._openai_api_key
@@ -147,6 +147,14 @@ class CodeCooker:
             print("I am GPT-4o")
             response = self._client_openai.chat.completions.create(
                 model="gpt-4o",
+                messages=prompt_w_history,
+            )
+            assistant_response = response.choices[0].message.content
+
+        if self._ai_type == "GPT-4o mini":
+            print("I am GPT-4o mini")
+            response = self._client_openai.chat.completions.create(
+                model="gpt-4o-mini",
                 messages=prompt_w_history,
             )
             assistant_response = response.choices[0].message.content

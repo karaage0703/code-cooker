@@ -5,7 +5,7 @@ from cooker.cooker import CodeCooker
 
 cooker = CodeCooker(ai_type="GPT-4o", config_path="./cooker/.config")
 
-ai_type_choices = ['Claude 3.5 Sonnet', 'GPT-4', 'GPT-4o', 'Gemini 1.5 Pro', 'Gemini 1.5 Flash']
+ai_type_choices = ['Claude 3.5 Sonnet', 'GPT-4', 'GPT-4o', 'GPT-4o mini', 'Gemini 1.5 Pro', 'Gemini 1.5 Flash']
 systemp_prompt_choices = ['Empty', 'Data Analysis', 'Web App Creator']
 
 

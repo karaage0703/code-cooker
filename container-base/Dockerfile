@@ -12,7 +12,7 @@ RUN pip install einops bitsandbytes scipy
 RUN pip install numpy pandas matplotlib japanize-matplotlib seaborn
 RUN pip install scikit-learn lightgbm tqdm ipykernel ipywidgets
 RUN pip install openpyxl
-RUN pip install gradio==4.31.1
+RUN pip install gradio==4.43.0
 RUN pip install qrcode
 
 WORKDIR /root

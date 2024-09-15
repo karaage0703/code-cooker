@@ -38,6 +38,12 @@ Dockerをシャットダウンするためには以下のコマンドを実行�
 $ docker compose down
 ```
 
+Docker Imageをリビルドするには以下のコマンドを実行します:
+
+```sh
+$ docker compose build
+```
+
 ### Google Colab
 
 [こちらのノートブック](colab-notebooks/code_cooker_on_colab.ipynb)をオープンします。

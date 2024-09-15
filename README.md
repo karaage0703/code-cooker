@@ -37,6 +37,12 @@ Execute following command for shutdown docker:
 $ docker compose down
 ```
 
+Execute following command for rebuild docker image:
+
+```sh
+$ docker compose build
+```
+
 ### Google Colab
 
 Open [colab-notebooks/code_cooker_on_colab.ipynb](colab-notebooks/code_cooker_on_colab.ipynb).
